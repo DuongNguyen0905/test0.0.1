@@ -45,7 +45,9 @@ const Home: React.FC = () => {
     const allGoals = await goalService.getAllGoals();
     setGoals(allGoals);
 
-    const bStatus = await financeService.getBudgetStatus();
+    const year = dateKey.substring(0, 4);
+    const month = dateKey.substring(5, 7);
+    const bStatus = await financeService.getBudgetStatus(year, month);
     setSafeDailyLimit(bStatus.safeDailyLimit);
     
     // Streak logic

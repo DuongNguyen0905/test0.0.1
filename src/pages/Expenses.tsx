@@ -47,7 +47,7 @@ const Expenses: React.FC = () => {
     const dashboardStats = await financeService.getDashboardStats(year, month);
     setStats(dashboardStats);
     
-    const bStatus = await financeService.getBudgetStatus();
+    const bStatus = await financeService.getBudgetStatus(year, month);
     setBudgetStatus(bStatus);
     
     const cats = await financeService.getSetting('expenseCategories', ['Ăn uống', 'Giải trí', 'Di chuyển', 'Mua sắm', 'Đau ốm', 'Tiền trọ']);
@@ -55,7 +55,8 @@ const Expenses: React.FC = () => {
     
     const sDay = await financeService.getSetting('salaryDay', 5);
     setSalaryDay(sDay);
-    const iBalance = await financeService.getSetting('initialBalance', 0);
+    const monthKey = `${year}-${month}`;
+    const iBalance = await financeService.getSetting(`initialBalance_${monthKey}`, 0);
     setInitialBalance(iBalance);
 
     const monthlyTrans = await financeService.getTransactionsByMonth(year, month);
@@ -108,8 +109,12 @@ const Expenses: React.FC = () => {
   };
 
   const saveSettings = async () => {
+    const year = dateKey.substring(0, 4);
+    const month = dateKey.substring(5, 7);
+    const monthKey = `${year}-${month}`;
+    
     await financeService.setSetting('salaryDay', Number(salaryDay) || 1);
-    await financeService.setSetting('initialBalance', Number(initialBalance) || 0);
+    await financeService.setSetting(`initialBalance_${monthKey}`, Number(initialBalance) || 0);
     await financeService.setSetting('expenseCategories', expenseCategories);
     setShowSettings(false);
     loadData();
@@ -157,7 +162,7 @@ const Expenses: React.FC = () => {
   const colors = ['#ff7b72', '#ff9f43', '#feca57', '#54a0ff', '#5f27cd', '#ff9ff3'];
 
   return (
-    <div className="page-container" style={{ paddingBottom: '100px', backgroundColor: 'var(--bg-main)' }}>
+    <div className="page-container" style={{ paddingBottom: '100px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
@@ -197,13 +202,24 @@ const Expenses: React.FC = () => {
         <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{budgetStatus.message}</p>
       </div>
 
+      {/* Savings Widget */}
+      <div className="card glass-panel" style={{ padding: '20px', borderRadius: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', color: 'var(--text-muted)' }}>Quỹ Tiết Kiệm Tích Lũy</h4>
+          <h2 style={{ margin: 0, color: budgetStatus.accumulatedSavings >= 0 ? 'var(--success)' : 'var(--danger)', fontSize: '24px' }}>
+            {budgetStatus.accumulatedSavings > 0 ? '+' : ''}{budgetStatus.accumulatedSavings?.toLocaleString('vi-VN')} đ
+          </h2>
+        </div>
+        <PiggyBank size={32} color={budgetStatus.accumulatedSavings >= 0 ? 'var(--success)' : 'var(--danger)'} opacity={0.8} />
+      </div>
+
       {/* Monthly Overview Card */}
       <div className="card" style={{ 
         background: 'linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%)', 
         color: 'white', padding: '24px', borderRadius: '24px', marginBottom: '24px', boxShadow: '0 10px 30px rgba(142, 202, 230, 0.4)'
       }}>
-        <p style={{ fontSize: '14px', margin: '0 0 8px 0', opacity: 0.9 }}>Số dư khả dụng hiện tại</p>
-        <h1 style={{ margin: '0 0 24px 0', fontSize: '32px' }}>{budgetStatus.currentGlobalBalance.toLocaleString('vi-VN')} đ</h1>
+        <p style={{ fontSize: '14px', margin: '0 0 8px 0', opacity: 0.9 }}>Số dư khả dụng tháng {format(selectedDate, 'MM')}</p>
+        <h1 style={{ margin: '0 0 24px 0', fontSize: '32px' }}>{budgetStatus.currentGlobalBalance?.toLocaleString('vi-VN')} đ</h1>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '16px', backdropFilter: 'blur(10px)', marginBottom: '16px' }}>
           <div>
@@ -360,8 +376,8 @@ const Expenses: React.FC = () => {
           
           <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
             <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Số dư ban đầu</h4>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Số tiền hiện có (nhập 1 lần lúc bắt đầu dùng app) để tính toán chuẩn xác.</p>
+              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Số dư ban đầu tháng {format(selectedDate, 'MM/yyyy')}</h4>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Số tiền bạn đang có vào đầu tháng để tính hạn mức chi tiêu cho riêng tháng này.</p>
               <div className="gemini-input-wrapper">
                 <input 
                   type="number" value={initialBalance} placeholder="Ví dụ: 5000000"
