@@ -98,7 +98,8 @@ export const financeService = {
       else allExpense += t.amount;
     });
 
-    const currentGlobalBalance = allIncome - allExpense;
+    const initialBalance = await this.getSetting<number>('initialBalance', 0);
+    const currentGlobalBalance = initialBalance + allIncome - allExpense;
 
     // Tính toán ngân sách mỗi ngày
     const safeDailyLimit = daysToSalary > 0 ? Math.floor(currentGlobalBalance / daysToSalary) : 0;
