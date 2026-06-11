@@ -8,7 +8,8 @@ const Memory: React.FC = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
-  const [filterHasExpense, setFilterHasExpense] = useState(false);
+  const [filterShowExpense, setFilterShowExpense] = useState(false);
+  const [filterShowDiary, setFilterShowDiary] = useState(false);
 
   const timelineData = useLiveQuery(async () => {
     let mems = await db.memories.toArray();
@@ -31,8 +32,12 @@ const Memory: React.FC = () => {
         return mMonth === filterMonth.padStart(2, '0');
       });
     }
-    if (filterHasExpense) {
+    if (filterShowExpense && !filterShowDiary) {
       mems = mems.filter(m => transByDate[m.dateKey] && transByDate[m.dateKey].some(t => t.type === 'expense'));
+    } else if (filterShowDiary && !filterShowExpense) {
+      mems = mems.filter(m => m.diary && m.diary.trim() !== '');
+    } else if (filterShowExpense && filterShowDiary) {
+      mems = mems.filter(m => (m.diary && m.diary.trim() !== '') && (transByDate[m.dateKey] && transByDate[m.dateKey].some(t => t.type === 'expense')));
     }
 
     // Lọc bỏ những ngày trống hoàn toàn (không ảnh, không nhật ký, không chi tiêu)
@@ -45,7 +50,7 @@ const Memory: React.FC = () => {
       ...m,
       transactions: transByDate[m.dateKey] || []
     }));
-  }, [filterMonth, filterYear, filterHasExpense]);
+  }, [filterMonth, filterYear, filterShowExpense, filterShowDiary]);
 
   const handleAuth = () => {
     if (password === '300826' || password === '090525') {
@@ -100,7 +105,10 @@ const Memory: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
-            <input type="checkbox" checked={filterHasExpense} onChange={e => setFilterHasExpense(e.target.checked)} /> Có chi tiêu
+            <input type="checkbox" checked={filterShowExpense} onChange={e => setFilterShowExpense(e.target.checked)} /> Có chi tiêu
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={filterShowDiary} onChange={e => setFilterShowDiary(e.target.checked)} /> Có nhật ký
           </label>
         </div>
       </div>
@@ -125,7 +133,7 @@ const Memory: React.FC = () => {
 
               <div style={{ padding: '16px' }}>
                 {/* Nhật ký */}
-                {entry.diary && (
+                {(!filterShowExpense || filterShowDiary) && entry.diary && (
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: 'var(--text-muted)' }}>
                       <BookOpen size={14} /> <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>Nhật ký</span>
@@ -135,7 +143,7 @@ const Memory: React.FC = () => {
                 )}
 
                 {/* Chi tiêu (Transactions) */}
-                {entry.transactions && entry.transactions.length > 0 && (
+                {(!filterShowDiary || filterShowExpense) && entry.transactions && entry.transactions.length > 0 && (
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: 'var(--text-muted)' }}>
                       <Receipt size={14} /> <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>Chi tiêu trong ngày</span>

@@ -3,7 +3,7 @@ import { financeService } from '../services/financeService';
 import { useDate } from '../contexts/DateContext';
 import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload, Edit2, Save } from 'lucide-react';
 import { format } from 'date-fns';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import Tesseract from 'tesseract.js';
 import { exportDexieBackup, importDexieBackup } from '../utils/backup';
 
@@ -23,6 +23,7 @@ const Expenses: React.FC = () => {
   const incomeCategories = ['Lương', 'Thưởng', 'Được cho', 'Khác'];
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [salaryDay, setSalaryDay] = useState<string | number>(5);
   const [initialBalance, setInitialBalance] = useState<string | number>(0);
   const [newCat, setNewCat] = useState('');
@@ -124,10 +125,13 @@ const Expenses: React.FC = () => {
     loadData();
   };
 
-  const addCategory = () => {
+  const addCategory = async () => {
     if (newCat.trim() && !expenseCategories.includes(newCat.trim())) {
-      setExpenseCategories([...expenseCategories, newCat.trim()]);
+      const newCats = [...expenseCategories, newCat.trim()];
+      setExpenseCategories(newCats);
+      setCategory(newCat.trim());
       setNewCat('');
+      await financeService.setSetting('expenseCategories', newCats);
     }
   };
 
@@ -194,8 +198,11 @@ const Expenses: React.FC = () => {
       </div>
 
       {/* Daily Budget Engine Alert */}
-      <div className="card" style={{ 
-        padding: '20px', borderRadius: '24px', marginBottom: '24px',
+      <div 
+        className="card" 
+        onClick={() => setShowBudgetModal(true)}
+        style={{ 
+        padding: '20px', borderRadius: '24px', marginBottom: '24px', cursor: 'pointer',
         background: budgetStatus.status === 'danger' ? 'rgba(255, 99, 132, 0.1)' : 
                    budgetStatus.status === 'success' ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255, 255, 255, 0.05)',
         border: `1px solid ${budgetStatus.status === 'danger' ? 'rgba(255, 99, 132, 0.3)' : budgetStatus.status === 'success' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`
@@ -209,7 +216,7 @@ const Expenses: React.FC = () => {
         <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--text-main)' }}>
           Hạn mức an toàn mỗi ngày: <strong>{budgetStatus.safeDailyLimit.toLocaleString('vi-VN')} đ</strong>
         </p>
-        <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{budgetStatus.message}</p>
+        <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{budgetStatus.message} (Nhấn để cấu hình)</p>
       </div>
 
       {/* Savings Widget */}
@@ -318,6 +325,21 @@ const Expenses: React.FC = () => {
           </div>
         </div>
 
+        {activeTab === 'expense' && (
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <div className="gemini-input-wrapper" style={{ flex: 1 }}>
+              <input 
+                type="text" placeholder="Thêm danh mục chi tiêu mới..." value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '14px', border: 'none', fontSize: '14px', backgroundColor: 'transparent' }}
+              />
+            </div>
+            <button onClick={addCategory} className="btn-primary" style={{ borderRadius: '14px', width: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              <Plus color="white" />
+            </button>
+          </div>
+        )}
+
         <div className="gemini-input-wrapper" style={{ marginBottom: '20px' }}>
           <input 
             type="text" 
@@ -350,22 +372,28 @@ const Expenses: React.FC = () => {
         </div>
         
         {chartData.length > 0 ? (
-          <div style={{ width: '100%', height: '250px' }}>
+          <div style={{ width: '100%', height: '280px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.1)" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-main)', fontSize: 12 }} width={80} />
+              <PieChart>
+                <Pie 
+                  data={chartData} 
+                  dataKey="amount" 
+                  nameKey="name" 
+                  cx="50%" cy="50%" 
+                  outerRadius={80} 
+                  labelLine={false}
+                  label={({ name, percent }) => percent > 0.05 ? `${name}` : ''}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  ))}
+                </Pie>
                 <Tooltip 
                   formatter={(value: number) => [`${value.toLocaleString('vi-VN')} đ`, 'Chi tiêu']}
                   contentStyle={{ backgroundColor: 'rgba(15, 15, 20, 0.9)', borderRadius: '8px', border: 'none', color: 'white' }}
                 />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={20}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         ) : (
@@ -390,46 +418,6 @@ const Expenses: React.FC = () => {
           </div>
           
           <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-            <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Số dư ban đầu tháng {format(selectedDate, 'MM/yyyy')}</h4>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Số tiền bạn đang có vào đầu tháng để tính hạn mức chi tiêu cho riêng tháng này.</p>
-              <div className="gemini-input-wrapper">
-                <input 
-                  type="number" value={initialBalance} placeholder="Ví dụ: 5000000"
-                  onChange={(e) => setInitialBalance(e.target.value)}
-                  style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent' }}
-                />
-              </div>
-            </div>
-
-            <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Ngày nhận lương hàng tháng</h4>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Sẽ được dùng để tính toán giới hạn chi tiêu mỗi ngày cho tới kỳ lương tiếp theo.</p>
-              <div className="gemini-input-wrapper">
-                <input 
-                  type="number" min="1" max="31" value={salaryDay}
-                  onChange={(e) => setSalaryDay(e.target.value)}
-                  style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent' }}
-                />
-              </div>
-            </div>
-
-            <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
-              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Thêm danh mục chi tiêu mới</h4>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <div className="gemini-input-wrapper" style={{ flex: 1 }}>
-                  <input 
-                    type="text" placeholder="Ví dụ: Tiền mạng, Quà cáp..." value={newCat}
-                    onChange={(e) => setNewCat(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent' }}
-                  />
-                </div>
-                <button onClick={addCategory} className="btn-primary" style={{ borderRadius: '10px', width: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                  <Plus color="white" />
-                </button>
-              </div>
-            </div>
-
             <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
               <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Dữ liệu ứng dụng</h4>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '15px' }}>Vì ứng dụng chạy offline, bạn nên thường xuyên sao lưu dữ liệu về máy để tránh mất mát khi đổi điện thoại/trình duyệt.</p>
@@ -452,6 +440,45 @@ const Expenses: React.FC = () => {
 
             <button onClick={saveSettings} className="btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '16px' }}>
               Lưu thay đổi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Modal */}
+      {showBudgetModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 3000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          animation: 'fadeIn 0.2s ease-out',
+        }}>
+          <div className="card glass-panel" style={{ width: '100%', padding: '24px', background: '#14141e' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: 'white' }}>Cấu hình Hạn mức</h3>
+              <button onClick={() => setShowBudgetModal(false)} style={{ background: 'none', border: 'none' }}>X</button>
+            </div>
+            
+            <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Số dư ban đầu tháng {format(selectedDate, 'MM/yyyy')}</h4>
+            <div className="gemini-input-wrapper" style={{ marginBottom: '20px' }}>
+              <input 
+                type="number" value={initialBalance} placeholder="Ví dụ: 5000000"
+                onChange={(e) => setInitialBalance(e.target.value)}
+                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent', color: 'white' }}
+              />
+            </div>
+
+            <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Ngày nhận lương</h4>
+            <div className="gemini-input-wrapper" style={{ marginBottom: '24px' }}>
+              <input 
+                type="number" min="1" max="31" value={salaryDay}
+                onChange={(e) => setSalaryDay(e.target.value)}
+                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent', color: 'white' }}
+              />
+            </div>
+
+            <button onClick={() => { saveSettings(); setShowBudgetModal(false); }} className="btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px' }}>
+              Lưu & Tính toán lại
             </button>
           </div>
         </div>
