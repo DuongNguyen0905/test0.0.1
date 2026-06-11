@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
-import { Lock, Image as ImageIcon, BookOpen, Trash2, Calendar, Filter, Receipt } from 'lucide-react';
+import { Lock, BookOpen, Calendar, Filter, Receipt } from 'lucide-react';
 
 const Memory: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isAuth, setIsAuth] = useState(false);
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
-  const [filterHasPhoto, setFilterHasPhoto] = useState(false);
   const [filterHasExpense, setFilterHasExpense] = useState(false);
 
   const timelineData = useLiveQuery(async () => {
@@ -32,16 +31,13 @@ const Memory: React.FC = () => {
         return mMonth === filterMonth.padStart(2, '0');
       });
     }
-    if (filterHasPhoto) {
-      mems = mems.filter(m => m.photos && m.photos.length > 0);
-    }
     if (filterHasExpense) {
       mems = mems.filter(m => transByDate[m.dateKey] && transByDate[m.dateKey].some(t => t.type === 'expense'));
     }
 
     // Lọc bỏ những ngày trống hoàn toàn (không ảnh, không nhật ký, không chi tiêu)
     mems = mems.filter(m => {
-      const hasContent = (m.diary && m.diary.trim() !== '') || (m.photos && m.photos.length > 0) || (transByDate[m.dateKey] && transByDate[m.dateKey].length > 0);
+      const hasContent = (m.diary && m.diary.trim() !== '') || (transByDate[m.dateKey] && transByDate[m.dateKey].length > 0);
       return hasContent;
     });
 
@@ -49,23 +45,13 @@ const Memory: React.FC = () => {
       ...m,
       transactions: transByDate[m.dateKey] || []
     }));
-  }, [filterMonth, filterYear, filterHasPhoto, filterHasExpense]);
+  }, [filterMonth, filterYear, filterHasExpense]);
 
   const handleAuth = () => {
     if (password === '300826' || password === '090525') {
       setIsAuth(true);
     } else {
       alert('Mật khẩu không đúng!');
-    }
-  };
-
-  const handleDeletePhoto = async (dateKey: string, photoIndex: number) => {
-    if (window.confirm("Bạn có chắc muốn xóa bức ảnh này?")) {
-      const entry = await db.memories.get(dateKey);
-      if (entry) {
-        entry.photos.splice(photoIndex, 1);
-        await db.memories.put(entry);
-      }
     }
   };
 
@@ -114,9 +100,6 @@ const Memory: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
-            <input type="checkbox" checked={filterHasPhoto} onChange={e => setFilterHasPhoto(e.target.checked)} /> Có ảnh chụp
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
             <input type="checkbox" checked={filterHasExpense} onChange={e => setFilterHasExpense(e.target.checked)} /> Có chi tiêu
           </label>
         </div>
@@ -148,28 +131,6 @@ const Memory: React.FC = () => {
                       <BookOpen size={14} /> <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>Nhật ký</span>
                     </div>
                     <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '15px', lineHeight: '1.6' }}>{entry.diary}</p>
-                  </div>
-                )}
-
-                {/* Hình ảnh */}
-                {entry.photos && entry.photos.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: 'var(--text-muted)' }}>
-                      <ImageIcon size={14} /> <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>Ảnh chụp ({entry.photos.length})</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-                      {entry.photos.map((photo: any, idx: number) => (
-                        <div key={idx} style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', aspectRatio: '1/1' }}>
-                          <img src={photo.url} alt="Memory" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button
-                            onClick={() => handleDeletePhoto(entry.dateKey, idx)}
-                            style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', padding: '5px', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={12} color="#ff7b72" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
 

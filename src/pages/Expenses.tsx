@@ -23,7 +23,8 @@ const Expenses: React.FC = () => {
   const incomeCategories = ['Lương', 'Thưởng', 'Được cho', 'Khác'];
 
   const [showSettings, setShowSettings] = useState(false);
-  const [salaryDay, setSalaryDay] = useState(5);
+  const [salaryDay, setSalaryDay] = useState<string | number>(5);
+  const [initialBalance, setInitialBalance] = useState<string | number>(0);
   const [newCat, setNewCat] = useState('');
   
   const [isScanning, setIsScanning] = useState(false);
@@ -54,6 +55,8 @@ const Expenses: React.FC = () => {
     
     const sDay = await financeService.getSetting('salaryDay', 5);
     setSalaryDay(sDay);
+    const iBalance = await financeService.getSetting('initialBalance', 0);
+    setInitialBalance(iBalance);
 
     const monthlyTrans = await financeService.getTransactionsByMonth(year, month);
     setTransactions(monthlyTrans);
@@ -105,7 +108,8 @@ const Expenses: React.FC = () => {
   };
 
   const saveSettings = async () => {
-    await financeService.setSetting('salaryDay', salaryDay);
+    await financeService.setSetting('salaryDay', Number(salaryDay) || 1);
+    await financeService.setSetting('initialBalance', Number(initialBalance) || 0);
     await financeService.setSetting('expenseCategories', expenseCategories);
     setShowSettings(false);
     loadData();
@@ -356,12 +360,24 @@ const Expenses: React.FC = () => {
           
           <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
             <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Số dư ban đầu</h4>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Số tiền hiện có (nhập 1 lần lúc bắt đầu dùng app) để tính toán chuẩn xác.</p>
+              <div className="gemini-input-wrapper">
+                <input 
+                  type="number" value={initialBalance} placeholder="Ví dụ: 5000000"
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                  style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent' }}
+                />
+              </div>
+            </div>
+
+            <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
               <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Ngày nhận lương hàng tháng</h4>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Sẽ được dùng để tính toán giới hạn chi tiêu mỗi ngày cho tới kỳ lương tiếp theo.</p>
               <div className="gemini-input-wrapper">
                 <input 
                   type="number" min="1" max="31" value={salaryDay}
-                  onChange={(e) => setSalaryDay(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setSalaryDay(e.target.value)}
                   style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: 'transparent' }}
                 />
               </div>
