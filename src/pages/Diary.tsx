@@ -35,7 +35,7 @@ const Diary: React.FC = () => {
 
   return (
     <div className="page-container" style={{ paddingBottom: '100px' }}>
-      <h2>Nhật ký của tớ</h2>
+      <h2>Nhật ký của tôi</h2>
       <DateNavigator />
       
       {saveSuccess && (

@@ -71,7 +71,7 @@ export const financeService = {
     await db.settings.put({ key, value });
   },
 
-  async getAccumulatedSavings(targetYear: string, targetMonth: string) {
+  async getAccumulatedSavingsDetails(targetYear: string, targetMonth: string) {
     const targetPrefix = `${targetYear}-${targetMonth.padStart(2, '0')}`;
     
     // Tìm tất cả các giao dịch
@@ -88,14 +88,9 @@ export const financeService = {
        }
     }
 
-    // Tính tổng tất cả initialBalance_YYYY-MM < targetPrefix
-    let totalSavings = 0;
     const settings = await db.settings.toArray();
-    
-    // Lọc ra các settings dạng initialBalance_YYYY-MM
     const initialBalanceKeys = settings.filter(s => s.key.startsWith('initialBalance_'));
     
-    // Thu thập tất cả các tháng (từ transactions và settings) có trước targetPrefix
     const pastMonths = new Set<string>();
     Object.keys(monthlyStats).forEach(k => pastMonths.add(k));
     initialBalanceKeys.forEach(s => {
@@ -103,16 +98,30 @@ export const financeService = {
        if (mKey < targetPrefix) pastMonths.add(mKey);
     });
 
-    for (const mKey of Array.from(pastMonths)) {
+    const details = [];
+    let totalSavings = 0;
+
+    // Sắp xếp tháng gần nhất lên trước
+    const sortedMonths = Array.from(pastMonths).sort((a, b) => b.localeCompare(a));
+
+    for (const mKey of sortedMonths) {
       const initBalSetting = settings.find(s => s.key === `initialBalance_${mKey}`);
       const initBal = initBalSetting ? Number(initBalSetting.value) : 0;
       const stats = monthlyStats[mKey] || { income: 0, expense: 0 };
       
       const monthSaving = initBal + stats.income - stats.expense;
       totalSavings += monthSaving;
+
+      details.push({
+        month: mKey,
+        income: stats.income,
+        expense: stats.expense,
+        initialBalance: initBal,
+        saving: monthSaving
+      });
     }
 
-    return totalSavings;
+    return { totalSavings, details };
   },
 
   /**
@@ -146,7 +155,9 @@ export const financeService = {
     const currentGlobalBalance = initialBalance + monthIncome - monthExpense;
 
     // Tính quỹ tiết kiệm tích luỹ
-    const accumulatedSavings = await this.getAccumulatedSavings(year, month);
+    const accumulatedData = await this.getAccumulatedSavingsDetails(year, month);
+    const accumulatedSavings = accumulatedData.totalSavings;
+    const accumulatedSavingsDetails = accumulatedData.details;
 
     // Tính toán ngân sách mỗi ngày (dựa trên số dư THÁNG NÀY)
     const safeDailyLimit = daysToSalary > 0 ? Math.floor(currentGlobalBalance / daysToSalary) : 0;
@@ -184,7 +195,8 @@ export const financeService = {
       message,
       status,
       salaryDay,
-      accumulatedSavings
+      accumulatedSavings,
+      accumulatedSavingsDetails
     };
   }
 };

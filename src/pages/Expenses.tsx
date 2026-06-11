@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { financeService } from '../services/financeService';
 import { useDate } from '../contexts/DateContext';
-import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload } from 'lucide-react';
+import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload, Edit2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import Tesseract from 'tesseract.js';
@@ -27,6 +27,10 @@ const Expenses: React.FC = () => {
   const [initialBalance, setInitialBalance] = useState<string | number>(0);
   const [newCat, setNewCat] = useState('');
   
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [editingMonth, setEditingMonth] = useState<string | null>(null);
+  const [editInitialBalance, setEditInitialBalance] = useState<string>('');
+
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreFileRef = useRef<HTMLInputElement>(null);
@@ -148,6 +152,12 @@ const Expenses: React.FC = () => {
     if (restoreFileRef.current) restoreFileRef.current.value = '';
   };
 
+  const savePastInitialBalance = async (monthKey: string) => {
+    await financeService.setSetting(`initialBalance_${monthKey}`, Number(editInitialBalance) || 0);
+    setEditingMonth(null);
+    loadData();
+  };
+
   // Prepare chart data
   const categoryTotals: Record<string, number> = {};
   transactions.filter(t => t.type === 'expense').forEach(t => {
@@ -203,12 +213,17 @@ const Expenses: React.FC = () => {
       </div>
 
       {/* Savings Widget */}
-      <div className="card glass-panel" style={{ padding: '20px', borderRadius: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div 
+        className="card glass-panel" 
+        style={{ padding: '20px', borderRadius: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        onClick={() => setShowSavingsModal(true)}
+      >
         <div>
           <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', color: 'var(--text-muted)' }}>Quỹ Tiết Kiệm Tích Lũy</h4>
           <h2 style={{ margin: 0, color: budgetStatus.accumulatedSavings >= 0 ? 'var(--success)' : 'var(--danger)', fontSize: '24px' }}>
             {budgetStatus.accumulatedSavings > 0 ? '+' : ''}{budgetStatus.accumulatedSavings?.toLocaleString('vi-VN')} đ
           </h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Nhấn để xem chi tiết</p>
         </div>
         <PiggyBank size={32} color={budgetStatus.accumulatedSavings >= 0 ? 'var(--success)' : 'var(--danger)'} opacity={0.8} />
       </div>
@@ -438,6 +453,82 @@ const Expenses: React.FC = () => {
             <button onClick={saveSettings} className="btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '16px' }}>
               Lưu thay đổi
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Savings Details Modal */}
+      {showSavingsModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'var(--bg-main)', zIndex: 3000,
+          display: 'flex', flexDirection: 'column',
+          animation: 'slideInRight 0.3s ease-out',
+        }}>
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', padding: '20px', backgroundColor: 'rgba(15, 15, 20, 0.8)', backdropFilter: 'blur(10px)', zIndex: 10, borderBottom: '1px solid var(--border-glass)' }}>
+            <button onClick={() => setShowSavingsModal(false)} style={{ background: 'none', border: 'none', padding: '5px', marginRight: '15px' }}>
+              <ChevronLeft size={24} color="var(--text-main)" />
+            </button>
+            <h3 style={{ margin: 0, flex: 1, textAlign: 'center', color: 'var(--text-main)' }}>Chi Tiết Tiết Kiệm</h3>
+            <div style={{ width: '34px' }}></div>
+          </div>
+          
+          <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+            <div className="card" style={{ padding: '20px', borderRadius: '20px', marginBottom: '20px', textAlign: 'center', background: 'linear-gradient(135deg, var(--success) 0%, #2ecc71 100%)', color: 'white' }}>
+              <p style={{ margin: '0 0 8px 0', opacity: 0.9 }}>Tổng Quỹ Tích Lũy</p>
+              <h1 style={{ margin: 0, fontSize: '36px' }}>{budgetStatus.accumulatedSavings > 0 ? '+' : ''}{budgetStatus.accumulatedSavings?.toLocaleString('vi-VN')} đ</h1>
+            </div>
+
+            <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Lịch sử các tháng trước</h4>
+            
+            {budgetStatus.accumulatedSavingsDetails && budgetStatus.accumulatedSavingsDetails.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {budgetStatus.accumulatedSavingsDetails.map((detail: any) => (
+                  <div key={detail.month} className="card glass-panel" style={{ padding: '16px', borderRadius: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
+                      <h4 style={{ margin: 0, color: 'var(--primary)' }}>Tháng {detail.month.split('-').reverse().join('/')}</h4>
+                      <span style={{ fontWeight: 'bold', fontSize: '18px', color: detail.saving >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        {detail.saving > 0 ? '+' : ''}{detail.saving.toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginBottom: '12px' }}>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Tổng Thu:</span> <br/> <strong style={{ color: 'var(--success)' }}>{detail.income.toLocaleString('vi-VN')} đ</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Tổng Chi:</span> <br/> <strong style={{ color: 'var(--danger)' }}>{detail.expense.toLocaleString('vi-VN')} đ</strong></div>
+                    </div>
+
+                    <div style={{ background: 'rgba(0,0,0,0.1)', padding: '10px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Số dư ban đầu</span>
+                        {editingMonth === detail.month ? (
+                          <input 
+                            type="number" 
+                            autoFocus
+                            value={editInitialBalance}
+                            onChange={(e) => setEditInitialBalance(e.target.value)}
+                            style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--primary)', color: 'var(--text-main)', fontSize: '16px', fontWeight: 'bold', outline: 'none', padding: '4px 0' }}
+                          />
+                        ) : (
+                          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{detail.initialBalance.toLocaleString('vi-VN')} đ</div>
+                        )}
+                      </div>
+                      
+                      {editingMonth === detail.month ? (
+                        <button onClick={() => savePastInitialBalance(detail.month)} style={{ background: 'var(--success)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Save size={16} /> Lưu
+                        </button>
+                      ) : (
+                        <button onClick={() => { setEditingMonth(detail.month); setEditInitialBalance(detail.initialBalance.toString()); }} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-glass)', borderRadius: '8px', padding: '8px', color: 'var(--text-main)' }}>
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', marginTop: '30px' }}>Chưa có dữ liệu tích lũy từ các tháng trước.</p>
+            )}
           </div>
         </div>
       )}
