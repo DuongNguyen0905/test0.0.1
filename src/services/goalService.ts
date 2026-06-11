@@ -1,4 +1,5 @@
-import { db, Goal } from '../utils/db';
+import { db } from '../utils/db';
+import type { Goal } from '../utils/db';
 
 export const goalService = {
   async addGoal(title: string, targetAmount: number, deadline?: string): Promise<string> {

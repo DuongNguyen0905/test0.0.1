@@ -1,4 +1,5 @@
-import { db, MemoryEntry } from '../utils/db';
+import { db } from '../utils/db';
+import type { MemoryEntry } from '../utils/db';
 
 export const memoryService = {
   /**

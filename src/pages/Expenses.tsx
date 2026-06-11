@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { financeService } from '../services/financeService';
 import { useDate } from '../contexts/DateContext';
-import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera } from 'lucide-react';
+import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import Tesseract from 'tesseract.js';
+import { exportDexieBackup, importDexieBackup } from '../utils/backup';
 
 const Expenses: React.FC = () => {
   const { dateKey, selectedDate } = useDate();
@@ -27,6 +28,7 @@ const Expenses: React.FC = () => {
   
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const restoreFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -114,6 +116,27 @@ const Expenses: React.FC = () => {
       setExpenseCategories([...expenseCategories, newCat.trim()]);
       setNewCat('');
     }
+  };
+
+  const handleBackup = async () => {
+    const success = await exportDexieBackup();
+    if (success) {
+      alert('Đã tải xuống file sao lưu!');
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (window.confirm('Cảnh báo: Nhập dữ liệu mới sẽ thay thế/gộp vào dữ liệu hiện tại. Bạn có chắc chắn muốn tiếp tục?')) {
+      const success = await importDexieBackup(file);
+      if (success) {
+        alert('Khôi phục dữ liệu thành công!');
+        loadData();
+      }
+    }
+    if (restoreFileRef.current) restoreFileRef.current.value = '';
   };
 
   // Prepare chart data
@@ -356,6 +379,26 @@ const Expenses: React.FC = () => {
                 </div>
                 <button onClick={addCategory} className="btn-primary" style={{ borderRadius: '10px', width: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                   <Plus color="white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="card glass-panel" style={{ padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
+              <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)' }}>Dữ liệu ứng dụng</h4>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '15px' }}>Vì ứng dụng chạy offline, bạn nên thường xuyên sao lưu dữ liệu về máy để tránh mất mát khi đổi điện thoại/trình duyệt.</p>
+              
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleBackup} className="btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', color: 'var(--primary)', border: '1px solid var(--border-glass)' }}>
+                  <Download size={18} /> Tải Sao Lưu
+                </button>
+                <input 
+                  type="file" accept=".json" 
+                  ref={restoreFileRef} 
+                  onChange={handleRestore} 
+                  style={{ display: 'none' }} 
+                />
+                <button onClick={() => restoreFileRef.current?.click()} className="btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '10px' }}>
+                  <Upload size={18} /> Khôi Phục
                 </button>
               </div>
             </div>

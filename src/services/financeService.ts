@@ -1,4 +1,5 @@
-import { db, Transaction, Setting } from '../utils/db';
+import { db } from '../utils/db';
+import type { Transaction, Setting } from '../utils/db';
 
 export const financeService = {
   async addTransaction(data: Omit<Transaction, 'id' | 'createdAt'>): Promise<string> {

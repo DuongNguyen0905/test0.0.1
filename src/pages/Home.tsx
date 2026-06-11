@@ -5,7 +5,8 @@ import { goalService } from '../services/goalService';
 import { financeService } from '../services/financeService';
 import DateNavigator from '../components/DateNavigator';
 import { Plus, Trash2, ClipboardList, Target, Award, ChevronLeft, X, TrendingUp, TrendingDown, Image as ImageIcon, BookOpen, Flame, Wallet } from 'lucide-react';
-import { Goal, db } from '../utils/db';
+import { db } from '../utils/db';
+import type { Goal } from '../utils/db';
 import { useNavigate } from 'react-router-dom';
 
 const Home: React.FC = () => {
