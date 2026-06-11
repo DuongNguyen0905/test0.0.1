@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { financeService } from '../services/financeService';
 import { useDate } from '../contexts/DateContext';
-import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload, Edit2, Save } from 'lucide-react';
+import { Settings, Plus, ChevronLeft, TrendingDown, TrendingUp, PieChart as PieChartIcon, AlertTriangle, CheckCircle, Activity, PiggyBank, Camera, Download, Upload, Edit2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import Tesseract from 'tesseract.js';
@@ -367,7 +367,7 @@ const Expenses: React.FC = () => {
       {/* Chart */}
       <div className="card glass-panel" style={{ padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-          <PieChart size={20} color="var(--primary)" />
+          <PieChartIcon size={20} color="var(--primary)" />
           <h3 style={{ margin: 0, fontSize: '16px' }}>Biểu đồ chi tiêu tháng {format(selectedDate, 'MM')}</h3>
         </div>
         
